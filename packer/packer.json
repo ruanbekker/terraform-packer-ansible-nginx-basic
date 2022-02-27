@@ -1,0 +1,77 @@
+{
+  "variables":{
+    "aws_profile":"terraform-personal",
+    "aws_region":"af-south-1",
+    "ssh_username":"ubuntu",
+    "instance_type":"t3.nano",
+    "ansible_connection":"local",
+    "ansible_version":"4.4.0"
+  },
+  "builders":[
+    {
+      "type":"amazon-ebs",
+      "profile":"{{user `aws_profile`}}",
+      "region":"{{user `aws_region` }}",
+      "vpc_filter":{
+        "filters":{
+          "tag:Name":"main",
+          "isDefault":"true"
+        }
+      },
+      "subnet_filter":{
+        "filters":{
+          "tag:Tier":"public"
+        },
+        "most_free":true,
+        "random":true
+      },
+      "source_ami_filter":{
+        "filters":{
+          "virtualization-type":"hvm",
+          "name":"ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*",
+          "root-device-type":"ebs"
+        },
+        "owners":["099720109477"],
+        "most_recent":true
+      },
+      "instance_type":"{{user `instance_type` }}",
+      "ssh_username":"{{user `ssh_username`}}",
+      "ami_name":"packer-base-{{timestamp}}",
+      "associate_public_ip_address":true,
+      "tags":{
+        "Name":"packer-ansible-{{timestamp}}",
+        "Timestamp":"packer-{{timestamp}}",
+        "BaseAmi":"{{ .SourceAMIName }}",
+        "Datestamp":"{{isotime}}",
+        "UUID":"{{uuid}}"
+      }
+    }
+  ],
+  "provisioners":[
+    {
+      "type":"shell",
+      "inline":[
+        "echo start",
+        "sudo apt update"
+      ]
+    },
+    {
+      "type":"shell",
+      "script":"../scripts/bootstrap.sh"
+    },
+    {
+      "type":"ansible-local",
+      "playbook_file":"../ansible/playbook.yml",
+      "playbook_dir":"../ansible",
+      "inventory_groups":[
+        "default"
+      ],
+      "role_paths":[
+        "../ansible/roles/web"
+      ],
+      "extra_arguments":[
+        "--extra-vars \"ansible_connection={{ user `ansible_connection` }}\""
+      ]
+    }
+  ]
+}

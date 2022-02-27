@@ -1,0 +1,36 @@
+---
+
+- name: Ensure nginx is installed
+  apt:
+    name: nginx
+    state: latest
+    update_cache: yes
+
+- name: Generate nginx config file from template
+  template:
+    src: "nginx.conf.j2"
+    dest: "/etc/nginx/nginx.conf"
+    mode: 0644
+
+- name: Copy website config
+  copy:
+    src: "www.conf"
+    dest: "/etc/nginx/conf.d/www.conf"
+    mode: 0644
+
+- name: Ensure directory exists
+  file:
+    path: "/var/www/html"
+    state: directory
+
+- name: Copy static files
+  copy:
+    src: "www/"
+    dest: "/var/www/html/"
+    mode: 0644
+
+- name: Enable Nginx
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started
